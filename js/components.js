@@ -284,7 +284,7 @@ export const components = {
     const ids = machines.flatMap((m) => [m.state, m.remaining].filter(Boolean));
     const cells = machines.map((m) => {
       const glyph = el('span', 'sym');
-      glyph.style.setProperty('--sym', `url(img/${m.icon}.png)`);
+      glyph.style.setProperty('--sym', `url(${new URL(`img/${m.icon}.png`, document.baseURI)})`); // absolute: var() urls resolve against the stylesheet
       const status = el('div', 'title', '—');
       const left = el('div', 'title time');
       const half = el('div', 'half');
