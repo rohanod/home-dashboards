@@ -1,0 +1,39 @@
+/* Removed from css/app.css (now playing, controls, backdrop) */
+
+/* Now playing */
+.np { display: flex; align-items: center; gap: 2.4vmin; height: 100%; }
+.np-art { width: 9vmin; height: 9vmin; flex: none; object-fit: cover; border-radius: var(--md-sys-shape-corner-medium); background: var(--md-sys-color-surface-container-high); }
+.np-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3vmin; }
+.np-title, .np-artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.np-bar { height: 0.9vmin; border-radius: 999px; background: var(--md-sys-color-surface-container-high); overflow: hidden; }
+.np-bar div { height: 100%; border-radius: inherit; background: var(--md-sys-color-primary); transition: width 1s linear; }
+/* Controls (used from a browser on the LAN; the kiosk has no pointer) */
+.np-scrub { padding: 1.3vmin 0; cursor: pointer; touch-action: none; }
+.np-scrub.dragging .np-bar div { transition: none; }
+.np-controls { display: flex; align-items: center; gap: 0.6vmin; flex: none; }
+.np-btn { width: 8.4vmin; height: 8.4vmin; padding: 2vmin; border: 0; border-radius: 999px; background: transparent; color: var(--md-sys-color-primary); cursor: pointer; }
+.np-btn.main { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.np-btn:active { background: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent); }
+.np-btn.main:active { background: color-mix(in srgb, var(--md-sys-color-primary) 80%, black); }
+.np-btn svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+
+/* Playing: blurred artwork backdrop, cards slightly translucent so it shows through */
+#backdrop {
+  display: none;
+  position: fixed;
+  z-index: -1;
+  /* Rendered at ~46% size and scaled up 2.6x: the blur is computed on a small layer (cheap on the Pi). */
+  top: -15%;
+  left: -15%;
+  width: 46%;
+  height: 46%;
+  transform: scale(2.6);
+  transform-origin: 0 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(22px) saturate(1.3);
+  opacity: 0.7;
+}
+:root[data-art] #backdrop { display: block; }
+:root[data-art] .card { background: color-mix(in srgb, var(--md-sys-color-surface-container) 65%, transparent); }
+:root[data-art] .row { background: color-mix(in srgb, var(--md-sys-color-surface-container-high) 70%, transparent); }

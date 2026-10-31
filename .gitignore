@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+# local agent state / permissions
+.claude/settings.local.json
+.claude/.cc-writes/
+# personal values (see config/local.example.js, local.env.example)
+config/local.js
+local.env
+.chromium/

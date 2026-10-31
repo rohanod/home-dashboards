@@ -1,0 +1,26 @@
+// Edit this file to change what the display shows. No build step: reload the page.
+//
+// Each page:
+//   id          unique, used by ?page=<id> preview
+//   seconds     how long the page stays on screen before rotating (ignored with one page)
+//   columns     grid columns on the page
+//   rows        optional CSS grid-template-rows, e.g. '2fr 3fr'
+//   components  list of { type, span, ...options }; span = columns the card uses
+//
+// Component types and options are defined in js/components.js.
+
+export const pages = [
+  {
+    id: 'home',
+    columns: 10,
+    rows: '3fr 4fr auto', // last row is the Sonos bar; it collapses when nothing is playing
+    components: [
+      { type: 'clock', span: 4, date: true },
+      // Town-level location (<town>), deliberately imprecise. Weather from Open-Meteo.
+      { type: 'weather', span: 6, lat: <lat>, lon: <lon>, label: '<town>' },
+      { type: 'transport', span: 5, title: '<stop name>', max: 4, stopId: '<stop-id>' },
+      { type: 'transport', span: 5, title: '<stop name>', max: 4, stopId: '<stop-id>' },
+      { type: 'nowplaying', span: 10, host: '<sonos>' },
+    ],
+  },
+];

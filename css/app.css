@@ -1,0 +1,136 @@
+/* Layout and component styles. Uses only theme tokens from theme.css. */
+* { box-sizing: border-box; margin: 0; }
+
+html, body, #stage { height: 100%; }
+
+body {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-sys-typescale-font);
+  cursor: none; /* kiosk: no pointer */
+  overflow: hidden;
+}
+
+/* Pages */
+.page {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 2), minmax(0, 1fr));
+  grid-template-rows: var(--rows, none);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 2vmin;
+  height: 100%;
+  padding: 3vmin;
+}
+
+/* Card: the only container; components live inside */
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 2.6vmin;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container);
+}
+
+.stack { display: flex; flex-direction: column; gap: 1vmin; min-height: 0; height: 100%; }
+
+/* Type scale (Material 3 roles) */
+.display-clock { font-size: min(19vmin, 11vw); font-weight: 300; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.display-small { font-size: 6vmin; font-weight: 400; line-height: 1.2; }
+.headline { font-size: 7vmin; font-weight: 400; line-height: 1.1; }
+.title { font-size: 4vmin; font-weight: 500; line-height: 1.3; }
+.body { font-size: 3.2vmin; line-height: 1.4; }
+.label { font-size: 2.4vmin; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--md-sys-color-on-surface-variant); }
+.muted { color: var(--md-sys-color-on-surface-variant); }
+.accent { color: var(--md-sys-color-primary); }
+
+.centered { justify-content: center; align-items: center; text-align: center; }
+
+/* Icons (inline SVG from js/components.js) */
+.wx-icon svg, .mode-icon svg, .due svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+.mode-icon { width: 4vmin; height: 4vmin; color: var(--md-sys-color-primary); flex: none; }
+.wx-icon[data-kind="sun"], .wx-icon[data-kind="partly"] { color: var(--icon-sun); }
+.wx-icon[data-kind="moon"] { color: var(--icon-moon); }
+.wx-icon[data-kind="cloud"], .wx-icon[data-kind="fog"] { color: var(--icon-cloud); }
+.wx-icon[data-kind="rain"], .wx-icon[data-kind="storm"] { color: var(--icon-rain); }
+.wx-icon[data-kind="snow"] { color: var(--icon-snow); }
+
+.head { display: flex; align-items: center; gap: 1.2vmin; }
+
+/* Weather */
+.wx-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2.5vmin; flex: 1; min-height: 0; align-items: center; }
+.wx-now { display: flex; flex-direction: column; gap: 0.6vmin; }
+.wx-head { display: flex; align-items: center; gap: 2.2vmin; }
+.wx-hero { width: 11vmin; height: 11vmin; flex: none; }
+.wx-temp { font-size: 8.5vmin; font-weight: 300; line-height: 1; letter-spacing: -0.02em; }
+.wx-graph { min-width: 0; height: 100%; }
+.wx-graph svg { display: block; width: 100%; height: 100%; }
+.wx-graph text { fill: var(--md-sys-color-on-surface-variant); font-size: 12px; font-family: inherit; }
+.wx-graph text.val { fill: var(--md-sys-color-on-surface); font-weight: 500; }
+.wx-graph .axis { stroke: var(--md-sys-color-outline-variant); stroke-width: 1; }
+.wx-graph .curve { fill: none; stroke: var(--md-sys-color-primary); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.wx-graph .area { fill: url(#wx-fade); }
+.wx-graph .now-line { stroke: var(--md-sys-color-outline-variant); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.wx-graph .now-dot { fill: var(--md-sys-color-primary); stroke: var(--md-sys-color-surface-container); stroke-width: 2; }
+
+/* Lists (calendar, transport): every row has the same height and spacing */
+.rows { display: flex; flex-direction: column; gap: 0.8vmin; overflow: hidden; }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 2vmin;
+  height: 7vmin;
+  padding: 0 2vmin;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-high);
+  font-size: 3.2vmin;
+  line-height: 1;
+}
+.row .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .time {
+  flex: none;
+  min-width: 11vmin;
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--md-sys-color-primary);
+}
+.row .line {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 9vmin;
+  height: 5.2vmin;
+  border-radius: 999px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  /* real colours are set inline from data/lines.json; this is the fallback */
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+/* Arriving: tram icon, slow pulse (2 s cycle) */
+.row .time.due { display: flex; justify-content: flex-end; align-items: center; height: 4.4vmin; animation: pulse 2s ease-in-out infinite; }
+.due svg { width: auto; height: 100%; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } } /* soft fade: never fully gone, so the row does not look like it loses content */
+
+/* Split card (laundry): two stacked halves with a small gap; outer corners rounded, inner edges square so they read as one card */
+.card.bare { padding: 0; background: none; border-radius: 0; overflow: visible; }
+.split { display: grid; grid-template-rows: 1fr 1fr; gap: 0.5vmin; height: 100%; }
+.half {
+  display: flex;
+  align-items: center;
+  gap: 2.2vmin;
+  min-width: 0;
+  padding: 0 3vmin;
+  background: var(--md-sys-color-surface-container);
+}
+.half:first-child { border-radius: var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0 0; }
+.half:last-child { border-radius: 0 0 var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large); }
+.half-text { min-width: 0; }
+.mode-icon.big { width: 8vmin; height: 8vmin; }

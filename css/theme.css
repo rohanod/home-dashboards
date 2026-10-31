@@ -1,0 +1,30 @@
+/* Material 3 tokens (baseline purple, light only). Edit values here to restyle every page. */
+:root {
+  color-scheme: light;
+
+  /* Colour roles */
+  --md-sys-color-primary: #6750a4;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-surface: #fef7ff;
+  --md-sys-color-on-surface: #1d1b20;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-surface-container: #f3edf7;
+  --md-sys-color-surface-container-high: #ece6f0;
+  --md-sys-color-outline-variant: #cac4d0;
+
+  /* Pictogram colours (weather icons) */
+  --icon-sun: #f7d95c;
+  --icon-moon: #c9a35a;
+  --icon-cloud: #d3d3d3;
+  --icon-cloud-front: #f7f7f7;
+  --icon-rain: #5aaaf0;
+  --icon-snow: #9fc9ee;
+  --icon-bolt: #f0b400;
+
+  /* Shape */
+  --md-sys-shape-corner-large: 28px;
+  --md-sys-shape-corner-medium: 16px;
+
+  /* Type (system fallbacks keep Pi OS fonts working without downloads) */
+  --md-sys-typescale-font: Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+}

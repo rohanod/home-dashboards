@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Static file server for the display, plus a small Sonos proxy.
+
+Browsers cannot call Sonos directly (no CORS headers), so /api/sonos?host=<ip> asks the
+speaker over UPnP (port 1400) and returns the current track as JSON, and
+POST /api/sonos/control sends play / pause / next / previous / seek.
+
+    python3 server.py [--port 8080] [--bind 127.0.0.1]
+"""
+import argparse
+import hashlib
+import ipaddress
+import json
+import urllib.request
+import xml.etree.ElementTree as ET
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+ROOT = Path(__file__).resolve().parent
+AVT = 'urn:schemas-upnp-org:service:AVTransport:1'
+ART = {}  # speaker host -> upstream artwork URL from its last reply (served via /api/art)
+
+
+def soap(host, action, **args):
+    params = ''.join(f'<{k}>{v}</{k}>' for k, v in args.items())  # only server-built values
+    body = (
+        '<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" '
+        's:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>'
+        f'<u:{action} xmlns:u="{AVT}"><InstanceID>0</InstanceID>{params}</u:{action}>'
+        '</s:Body></s:Envelope>'
+    ).encode()
+    req = urllib.request.Request(
+        f'http://{host}:1400/MediaRenderer/AVTransport/Control',
+        body,
+        {'Content-Type': 'text/xml; charset="utf-8"', 'SOAPACTION': f'"{AVT}#{action}"'},
+    )
+    with urllib.request.urlopen(req, timeout=4) as res:
+        return ET.fromstring(res.read())
+
+
+def text(root, name):
+    """Text of the first element with this local name, or ''."""
+    for e in root.iter():
+        if e.tag.rsplit('}', 1)[-1] == name:
+            return (e.text or '').strip()
+    return ''
+
+
+def seconds(hms):
+    try:
+        h, m, s = (int(x) for x in hms.split(':'))
+        return h * 3600 + m * 60 + s
+    except ValueError:
+        return 0  # e.g. NOT_IMPLEMENTED or empty (radio streams)
+
+
+def now_playing(host):
+    state = text(soap(host, 'GetTransportInfo'), 'CurrentTransportState')
+    pos = soap(host, 'GetPositionInfo')
+    info = {
+        'state': state,
+        'title': '',
+        'artist': '',
+        'album': '',
+        'art': '',
+        'duration': seconds(text(pos, 'TrackDuration')),
+        'position': seconds(text(pos, 'RelTime')),
+    }
+    meta = text(pos, 'TrackMetaData')
+    if meta and meta != 'NOT_IMPLEMENTED':
+        didl = ET.fromstring(meta)  # DIDL-Lite is escaped inside the SOAP reply
+        info['title'] = text(didl, 'title') or text(didl, 'streamContent')
+        info['artist'] = text(didl, 'creator')
+        info['album'] = text(didl, 'album')
+        art = text(didl, 'albumArtURI')
+        upstream = f'http://{host}:1400{art}' if art.startswith('/') else art
+        if upstream.startswith(('http://', 'https://')):  # never fetch file: or other schemes
+            ART[host] = upstream
+            # Same-origin URL so the page can read pixels (theme colours); the token busts caches on track change.
+            info['art'] = f'/api/art?host={host}&t={hashlib.md5(upstream.encode()).hexdigest()[:8]}'
+    return info
+
+
+ACTIONS = {'play': ('Play', {'Speed': 1}), 'pause': ('Pause', {}), 'next': ('Next', {}), 'previous': ('Previous', {})}
+
+
+def hms(sec):
+    return f'{sec // 3600}:{sec % 3600 // 60:02d}:{sec % 60:02d}'
+
+
+def control(host, action, position=0):
+    if action == 'seek':
+        soap(host, 'Seek', Unit='REL_TIME', Target=hms(max(0, int(position))))
+    else:
+        name, args = ACTIONS[action]
+        soap(host, name, **args)
+
+
+class Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(ROOT), **kwargs)
+
+    def do_GET(self):
+        url = urlparse(self.path)
+        host = parse_qs(url.query).get('host', [''])[0]
+        if url.path == '/api/sonos':
+            self.sonos(host)
+        elif url.path == '/api/art':
+            self.art(host)
+        else:
+            super().do_GET()
+
+    def end_headers(self):
+        # Static files: always revalidate, so a deploy shows up on the next load.
+        if not getattr(self, 'cache_set', False):
+            self.send_header('Cache-Control', 'no-cache')
+        super().end_headers()
+
+    def do_POST(self):
+        if urlparse(self.path).path != '/api/sonos/control':
+            return self.reply(404, 'application/json', b'{}')
+        # State-changing: refuse requests made by pages from other origins (CSRF from a browser on the LAN).
+        origin = self.headers.get('Origin')
+        if origin and urlparse(origin).netloc != self.headers.get('Host'):
+            return self.reply(403, 'application/json', b'{"error": "cross-origin"}')
+        try:
+            req = json.loads(self.rfile.read(min(int(self.headers.get('Content-Length', 0)), 1024)))
+            host, action = req['host'], req['action']
+            if not ipaddress.ip_address(host).is_private or (action != 'seek' and action not in ACTIONS):
+                raise ValueError(action)
+            position = int(req.get('position', 0))
+        except (ValueError, KeyError, TypeError):
+            return self.reply(400, 'application/json', b'{"error": "bad request"}')
+        try:
+            control(host, action, position)
+            self.reply(200, 'application/json', b'{"ok": true}')
+        except Exception as e:  # unreachable speaker, action not allowed for this source, ...
+            self.reply(502, 'application/json', json.dumps({'error': str(e)}).encode())
+
+    def reply(self, status, ctype, body, cache='no-store'):
+        self.cache_set = True
+        self.send_response(status)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Cache-Control', cache)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def art(self, host):
+        # Only the artwork URL the speaker itself reported; no caller-supplied URLs.
+        upstream = ART.get(host)
+        if not upstream:
+            return self.reply(404, 'text/plain', b'no artwork')
+        try:
+            with urllib.request.urlopen(upstream, timeout=6) as res:
+                self.reply(200, res.headers.get_content_type(), res.read(), 'max-age=86400')
+        except Exception:
+            self.reply(502, 'text/plain', b'artwork unavailable')
+
+    def sonos(self, host):
+        try:
+            # Only LAN addresses: this endpoint must not become an open proxy.
+            if not ipaddress.ip_address(host).is_private:
+                raise ValueError(host)
+            status, payload = 200, now_playing(host)
+        except ValueError:
+            status, payload = 400, {'error': 'host must be a private IP address'}
+        except Exception as e:  # unreachable speaker, bad reply, ...
+            status, payload = 502, {'error': str(e)}
+        self.reply(status, 'application/json', json.dumps(payload).encode())
+
+
+if __name__ == '__main__':
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--port', type=int, default=8080)
+    ap.add_argument('--bind', default='127.0.0.1')
+    args = ap.parse_args()
+    ThreadingHTTPServer((args.bind, args.port), Handler).serve_forever()
