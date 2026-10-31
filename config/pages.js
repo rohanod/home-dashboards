@@ -16,10 +16,10 @@ export const pages = [
   {
     id: 'home',
     columns: 10,
-    rows: '3fr 2fr',
+    rows: '7fr 2fr',
     components: [
       { type: 'clock', span: 4, date: true },
-      { type: 'weather', span: 6, ...local.weather },
+      { type: 'weather', span: 6, ...local.weather }, // location comes from Home Assistant unless local.js sets weather
       { type: 'laundry', span: 10, machines: local.laundry },
       // Transport cards (off): add to this list to re-enable, using the stops in local.js.
       // ...local.stops.map((s) => ({ type: 'transport', span: 5, ...s })),

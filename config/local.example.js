@@ -1,7 +1,7 @@
 // Copy to config/local.js (git-ignored) and fill in. Anything personal lives there, not in git.
 export default {
-  // Town-level coordinates are plenty for a forecast.
-  weather: { lat: 46.2, lon: 6.15, label: 'Geneva' },
+  // Weather location comes from Home Assistant (rounded to ~1 km). Override only if needed:
+  // weather: { lat: 46.2, lon: 6.15, label: 'Geneva' },
 
   // Transitous stops for the (optional) transport cards. Find an id:
   // https://api.transitous.org/api/v1/geocode?text=<exact stop name>

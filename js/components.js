@@ -151,7 +151,8 @@ export const components = {
 
   // Open-Meteo: free, no API key.
   // Today's weather: current conditions plus an hourly temperature graph for the whole day.
-  weather({ lat, lon, label = '' }) {
+  // lat/lon are optional: without them the location comes from Home Assistant (server.py /api/location).
+  weather({ lat, lon, label }) {
     const hero = el('span', 'wx-hero wx-icon');
     const temp = el('div', 'wx-temp', '—');
     const condition = el('div', 'title', 'Loading…');
@@ -164,12 +165,17 @@ export const components = {
     const body = el('div', 'wx-body');
     body.append(now, graph);
     const node = el('div', 'stack');
-    node.append(el('div', 'label', label), body);
+    const where = el('div', 'label', label ?? '');
+    node.append(where, body);
+    let place = lat !== undefined ? Promise.resolve({ lat, lon }) : null;
 
     const refresh = async () => {
       try {
+        place ??= getJSON('api/location').catch((e) => { place = null; throw e; });
+        const here = await place;
+        if (label === undefined) where.textContent = here.name ?? '';
         const url = 'https://api.open-meteo.com/v1/forecast'
-          + `?latitude=${lat}&longitude=${lon}`
+          + `?latitude=${here.lat}&longitude=${here.lon}`
           + '&current=temperature_2m,weather_code,is_day'
           + '&hourly=temperature_2m'
           + '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max'
@@ -268,36 +274,38 @@ export const components = {
   },
 
   // Appliances from Home Assistant, via server.py's /api/ha (needs HA_URL / `--ha <url>`).
-  // One card split into equal halves, one per machine:
+  // One card split into stacked halves, one line per machine:
   //   machines: [{ title, icon, state, remaining?, idle? }]
+  //     icon      name of an SF Symbol rendered to img/<icon>.png (a tinted mask, so the real glyph is kept)
   //     state     entity whose value is the status ('on'/'off' read as Running/Idle; other values shown as-is)
-  //     remaining optional entity holding minutes left
+  //     remaining optional entity holding minutes left (always shown when set, "—" if unknown)
   //     idle      status values that mean "not running"
   laundry({ machines }) {
     const ids = machines.flatMap((m) => [m.state, m.remaining].filter(Boolean));
     const cells = machines.map((m) => {
-      const glyph = el('span', 'mode-icon big');
-      glyph.innerHTML = icons[m.icon];
-      const status = el('div', 'display-small', '—');
-      const detail = el('div', 'body muted');
-      const text = el('div', 'half-text');
-      text.append(el('div', 'label', m.title), status, detail);
+      const glyph = el('span', 'sym');
+      glyph.style.setProperty('--sym', `url(img/${m.icon}.png)`);
+      const status = el('div', 'title', '—');
+      const left = el('div', 'title time');
       const half = el('div', 'half');
-      half.append(glyph, text);
-      return { m, half, status, detail };
+      half.append(glyph, el('div', 'title half-name', m.title), status, left);
+      return { m, half, status, left };
     });
     const node = el('div', 'split');
     node.append(...cells.map((c) => c.half));
     const refresh = async () => {
       let data = null;
       try { data = await getJSON(`api/ha?ids=${ids.join(',')}`); } catch { /* shown as Unavailable below */ }
-      for (const { m, status, detail } of cells) {
+      for (const { m, status, left } of cells) {
         const raw = data?.[m.state]?.toLowerCase();
         const running = raw !== undefined && !(m.idle ?? ['off', 'idle', 'ready to start', 'unknown', 'unavailable']).includes(raw);
         status.textContent = raw === undefined ? 'Unavailable' : raw === 'on' ? 'Running' : raw === 'off' ? 'Idle' : data[m.state];
         status.classList.toggle('accent', running);
-        const mins = Math.round(Number(data?.[m.remaining]));
-        detail.textContent = running && mins > 0 ? `${mins} min left` : '';
+        status.classList.toggle('muted', !running);
+        if (m.remaining) {
+          const mins = Math.round(Number(data?.[m.remaining]));
+          left.textContent = Number.isFinite(mins) && data[m.remaining] !== 'unknown' ? `${mins} min left` : '— min left';
+        }
       }
     };
     return { node, refresh, every: MINUTE, bare: true };

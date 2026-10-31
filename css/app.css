@@ -125,12 +125,22 @@ body {
 .half {
   display: flex;
   align-items: center;
-  gap: 2.2vmin;
+  gap: 2vmin;
   min-width: 0;
   padding: 0 3vmin;
   background: var(--md-sys-color-surface-container);
 }
 .half:first-child { border-radius: var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0 0; }
 .half:last-child { border-radius: 0 0 var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large); }
-.half-text { min-width: 0; }
-.mode-icon.big { width: 8vmin; height: 8vmin; }
+.half-name { font-weight: 500; }
+.half .time { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* SF Symbol rendered to a PNG (img/), tinted via mask so the glyph is untouched */
+.sym {
+  flex: none;
+  width: 6vmin;
+  height: 6vmin;
+  background: var(--md-sys-color-primary);
+  -webkit-mask: var(--sym) center / contain no-repeat;
+  mask: var(--sym) center / contain no-repeat;
+}

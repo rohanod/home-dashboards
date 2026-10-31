@@ -5,7 +5,8 @@
 
 Static files are always revalidated (no-cache), so a deploy shows up on the next page load.
 
-With --ha <url> (or HA_URL), GET /api/ha?ids=a.b,c.d returns {"a.b": "<state>", ...} from Home Assistant.
+With --ha <url> (or HA_URL), GET /api/ha?ids=a.b,c.d returns {"a.b": "<state>", ...} from Home Assistant,
+and GET /api/location returns HA's home {lat, lon, name} (rounded). Responses are cached briefly.
 Auth is HA's trusted_networks provider (this host must be allowed there): no token is stored.
 """
 import argparse
@@ -24,6 +25,8 @@ HA_URL = None
 CLIENT_ID = 'http://localhost/'  # any http URL; HA only checks it is consistent across the login steps
 ENTITY = re.compile(r'^[a-z_]+\.[a-z0-9_]+$')
 _ha = {'token': None, 'expires': 0}
+_cache = {}  # path+query -> (expires, body); HA is asked at most once per TTL however many screens are open
+TTL = 10
 _ctx = ssl.create_default_context()
 _ctx.check_hostname = False  # HA is on the LAN with a self-signed certificate
 _ctx.verify_mode = ssl.CERT_NONE
@@ -60,18 +63,29 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
-        if url.path != '/api/ha':
+        if url.path not in ('/api/ha', '/api/location'):
             return super().do_GET()
         ids = urllib.parse.parse_qs(url.query).get('ids', [''])[0].split(',')
-        if not HA_URL or not ids or not all(ENTITY.match(i) for i in ids):
+        if not HA_URL or (url.path == '/api/ha' and not all(ENTITY.match(i) for i in ids)):
             return self.send_error(400)
-        try:
-            token = ha_token()
-            out = {i: ha_call(f'/api/states/{i}', token=token)['state'] for i in ids}
-        except Exception as e:  # unreachable HA, unknown entity, auth refused
-            _ha['expires'] = 0
-            return self.send_error(502, str(e)[:100])
-        body = json.dumps(out).encode()
+        hit = _cache.get(self.path)
+        if hit and hit[0] > time.time():
+            body = hit[1]
+        else:
+            try:
+                token = ha_token()
+                if url.path == '/api/location':  # home coordinates from HA, rounded to ~1 km
+                    cfg = ha_call('/api/config', token=token)
+                    out = {'lat': round(cfg['latitude'], 2), 'lon': round(cfg['longitude'], 2), 'name': cfg.get('location_name')}
+                else:
+                    out = {i: ha_call(f'/api/states/{i}', token=token)['state'] for i in ids}
+            except Exception as e:  # unreachable HA, unknown entity, auth refused
+                _ha['expires'] = 0
+                return self.send_error(502, str(e)[:100])
+            body = json.dumps(out).encode()
+            if len(_cache) > 50:
+                _cache.clear()
+            _cache[self.path] = (time.time() + (3600 if url.path == '/api/location' else TTL), body)
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))

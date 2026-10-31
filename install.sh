@@ -10,7 +10,7 @@ set -euo pipefail
 REPO=https://github.com/rohanod/home-dashboards.git
 APP_USER=$USER
 APP_DIR=$HOME/home-display
-URL=http://localhost:8080/
+URL=http://localhost/
 
 [ "$(id -u)" -ne 0 ] || { echo "run as the normal user, not root"; exit 1; }
 
@@ -40,7 +40,8 @@ After=network.target
 User=$APP_USER
 WorkingDirectory=$APP_DIR
 EnvironmentFile=-$APP_DIR/local.env
-ExecStart=/usr/bin/python3 $APP_DIR/server.py --port 8080 --bind 0.0.0.0
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+ExecStart=/usr/bin/python3 $APP_DIR/server.py --port 80 --bind 0.0.0.0
 Restart=always
 
 [Install]
