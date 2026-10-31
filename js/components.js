@@ -293,7 +293,7 @@ export const components = {
       try { data = await getJSON(`api/ha?ids=${ids.join(',')}`); } catch { /* shown as Unavailable below */ }
       for (const { m, status, detail } of cells) {
         const raw = data?.[m.state]?.toLowerCase();
-        const running = raw !== undefined && !(m.idle ?? ['off', 'idle', 'unknown', 'unavailable']).includes(raw);
+        const running = raw !== undefined && !(m.idle ?? ['off', 'idle', 'ready to start', 'unknown', 'unavailable']).includes(raw);
         status.textContent = raw === undefined ? 'Unavailable' : raw === 'on' ? 'Running' : raw === 'off' ? 'Idle' : data[m.state];
         status.classList.toggle('accent', running);
         const mins = Math.round(Number(data?.[m.remaining]));
