@@ -8,3 +8,8 @@
 - Docs and archive scrubbed of IPs, stop names, town, coordinates, paths and key paths. `AGENTS.md` deploy section rewritten.
 - Repo deleted and recreated public with one clean commit (see end of this entry for status).
 - Follow-up: laundry halves stacked vertically (rows `3fr 2fr`). `install.sh` now copies `local.env.example` to `local.env` and `config/local.example.js` to `config/local.js` by default (`HA_URL=… bash install.sh` presets it); Chromium profile moved into `~/home-display/.chromium`; new `uninstall.sh` (disables and deletes the two units, restores the tty1 login, deletes the directory; apt packages stay).
+- Laundry icons: `img/washer.fill.png`, `img/dryer.fill.png` (native AppKit render, 256 px) used as CSS masks (`.sym`); the flattened SVGs were removed from `js/icons.js`. The Swift render script was a throwaway and is not in the repo.
+- Laundry card: one line per machine (icon, name, status, remaining time at right), rows `7fr 2fr`. Remaining time is always shown when the machine has a `remaining` entity ("— min left" if unknown). The washer has no remaining-time entity in HA, so none is shown.
+- Location: `server.py` `/api/location` returns HA's home coordinates (rounded); `weather` uses it when `lat`/`lon` are not set in `config/local.js`. The label defaults to HA's location name.
+- Server listens on port 80 on the Pi (`install.sh` unit; `http://<pi>/`); HA responses are cached 10 s (location 1 h) so any number of open screens cost HA one request per interval.
+- Not done: text weight / aspect-ratio responsiveness (asked to confirm first). Washer remaining time has no entity.
