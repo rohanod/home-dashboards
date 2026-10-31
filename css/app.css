@@ -1,4 +1,11 @@
 /* Layout and component styles. Uses only theme tokens from theme.css. */
+
+/* Roboto is bundled (fonts/, Apache-2.0) so every screen has the same weights: the Pi has no light/medium
+   weights of its system fonts, which made 300 and 500 render as regular/bold there. */
+@font-face { font-family: Roboto; font-weight: 300; src: url(../fonts/Roboto-Light.ttf); }
+@font-face { font-family: Roboto; font-weight: 400; src: url(../fonts/Roboto-Regular.ttf); }
+@font-face { font-family: Roboto; font-weight: 500; src: url(../fonts/Roboto-Medium.ttf); }
+@font-face { font-family: Roboto; font-weight: 700; src: url(../fonts/Roboto-Bold.ttf); }
 * { box-sizing: border-box; margin: 0; }
 
 html, body, #stage { height: 100%; }
@@ -9,6 +16,7 @@ body {
   font-family: var(--md-sys-typescale-font);
   cursor: none; /* kiosk: no pointer */
   overflow: hidden;
+  -webkit-font-smoothing: antialiased; /* macOS renders text heavier than Linux otherwise */
 }
 
 /* Pages */

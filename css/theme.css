@@ -25,6 +25,6 @@
   --md-sys-shape-corner-large: 28px;
   --md-sys-shape-corner-medium: 16px;
 
-  /* Type (system fallbacks keep Pi OS fonts working without downloads) */
+  /* Type: bundled Roboto (see css/app.css), system fonts only as a fallback */
   --md-sys-typescale-font: Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
 }
